@@ -1,0 +1,395 @@
+---
+title: "Into to R"
+output: html_document
+date: "2023-04-17"
+---
+
+```{r setup, include=FALSE, echo=F}
+# Above is how a r chunk is set up
+# To set up a r chunk you use three ``` followed by a {} with r as the first input
+# After ```{r} you can have the chunk named. In this case this chunk is named setup
+# Following the naming of the chunk you can have chunk settings. There are many many settings available and you will learn them with time. 
+# This chunk has include set to FALSE and echo set to TRUE. Notice that you can use the word FALSE in all capital letter or F capitalized in place of FALSE. This is up to your personal preference and the same can be done for TRUE (T). 
+#The chunk must be ended with another three ``` before creating the next chunk
+
+#_____________________________________________#
+
+# When you first want to use a package you will need to install it
+# This is done using the function install.packages()
+# After installing a package it will be on your computer until you remove it
+# You will occasionally need to update your packages but that is not a regular thing
+#install.packages("tidyverse","ggplot2","readxl")
+
+# After a package is installed you will need to activate it
+# This is done with the function library()
+# For each package you will need a separate library call to activate it
+library(tidyverse)
+library(ggplot2)
+
+# If you do not want a line of code to run you can comment it as seen here.
+# A comment is made anytime you use a # and will result in the text commented being skipped when the code is run. 
+
+#library(readxl)
+
+#____IMPORTANT____#
+# If you are ever confused about a function use the ? in the below command console to view its help file.
+# This would look like ?mutate
+# The help tab on the right side of the screen will display helpful information about that function
+#_________________#
+
+
+```
+
+
+```{r data setup, echo= F}
+# For this tutorial we will be using the mtcars dataset which come with R.
+# The function view() will allows you to visualize a dataframe in R (more on that later). 
+# Note: A new tab will be opened at the top of this window. 
+view(mtcars)
+
+# You can see that the mtcars dataset has 11 columns, 32 rows, and a special column (the left most column) called rownames. 
+
+# We can not work with the mtcars dataset in this state so we need to load it into our environment (upper right corner tab) under a name of our choice. We will name this dataframe r_intro_cars using the <- operation which looks like an arrow. 
+
+r_into_cars <- mtcars
+
+# Opps, I seems to have made a mistake when naming our dataframe. I accidentally forgot misspelled intro as into.
+# We can fix this using the function rm() which removes an object from our environment
+
+rm(r_into_cars)
+
+# Now the mtcars dataset is gone from our global environment and we will fix the name as r_intro_cars. 
+# This can be done by fixing the name on line 53 of this code. However, I want to keep this tutorial linear so I will rewrite the code with the new fixed name below. 
+
+r_intro_cars <- mtcars
+
+# It is important to not have any spaces when naming objects in R. Spaces do not work well and will cause headaches down the road. Get used to using underscores _ in the place of spaces. 
+
+# Now we have loaded the mtcars dataset into our global environment as a dataframe. In the next chunk we will manipulate this dataframe using pipes. 
+
+```
+
+```{r data manipulation, echo=F}
+
+# There are countless ways to manipulate data but pipes will be used throughout them all. They allow ease of coding by providing a logical path from one function to another with the output of all pipes being saved as an R object in the global environment. 
+
+four_cyl_liters_per_100k <- r_intro_cars %>% filter(cyl == 4) %>% mutate(L_per_100k = 235.215/mpg, .before = "mpg")
+
+# The above code takes our r_intro_cars dataframe and filters it so only cars with 4 cylinder engines are left. Then we mutate the miles per gallon (mpg) column to liters per 100 kilometres by dividing 235.215 by the value in the mpg column. Finally a new column is made called L_per_100k before the column mpg with the value we calculated. 
+
+# Now view the new dataframe object to see how it changed. You can use view(four_cyl_liters_per_100k) or you can click on the dataframe object in the environment tab to the upper right. 
+
+# Now say you want to filter so you only have cars with a 4 cylinder engine and their horsepower is greater than 90. The code for that would be as follows. 
+
+four_cyl_hp_90 <- r_intro_cars %>% filter(cyl == 4 & hp > 90) %>% mutate(L_per_100k = 235.215/mpg)
+
+# Within a filter you can use & for AND, | for OR, and ! for negate. 
+
+no_four_cyl_hp_90 <- r_intro_cars %>% filter(!cyl == 4 & hp > 120) %>% mutate(L_per_100k = 235.215/mpg)
+
+# Here we omit all 4 cylinder engines and only select those from the remaining which have a horsepower over 120
+
+# You can learn more ways to use these by using ? on filter and mutate
+
+
+```
+
+```{r more advance data manipulation, echo=F, include=F}
+# Here we will take a dataset, manipulate it, and display it on a map.
+
+# First clear the environment by clicking the broom icon in the environment tab.
+
+# Then we will load in and manipulate the csv dataset.
+# read_csv() from the readxl package is great for reading in csv files. 
+dat_beetles <- read_csv("PST_IF_PTC.csv", col_names = T) %>% 
+  # Here we rename the columns using the rename() function to something more intuitive.
+  rename("Common_name" = "PST_CMN_NM",
+         "Latin_name" = "PST_LTN_NM",
+         "Species_code" = "PST_SPC_CD",
+         "Year" = "CPTR_YR",
+         "lat" = "X",
+         "long" = "Y",
+         "unit_number" = "ORG_UNITNO",
+         "Tree_code" = "TR_SPCS_CD",
+         "Tree_name" = "TR_CM_NM",
+         "Area_ha" = "AREA_HA") %>%
+  # Here we get rid of all other columns from the original dataset we do not need.
+  select(c(lat,long,"Common_name", "Latin_name","Year","unit_number","Species_code")) %>% 
+  # This is more advance, but here we create a new column called species_code and make a specific code be used for each beetle name in the Common_name column. 
+  mutate(species_code = case_when(Common_name == "Western Balsam Bark Beetle" ~ "IBB",
+                                  Common_name == "Spruce Beetle" ~ "ISB",
+                                  Common_name == "Douglas-fir Beetle" ~ "IBD",
+                                  Common_name == "Flooding" ~ NA,
+                                  Common_name == "Post-burn Mortality" ~ NA,
+                                  Common_name == "Mountain Pine Beetle" ~ "IBM",
+                                  Common_name == "Slide" ~ NA,
+                                  TRUE ~ Common_name)) %>% 
+  # Finally we filter the names as we need. 
+  filter(Common_name %in% c("Western Balsam Bark Beetle","Spruce Beetle","Douglas-fir Beetle","Mountain Pine Beetle","Bark Beetles","Balsam Woolly Adelgid","Western Pine Beetle"))
+
+#install.packages("elevatr","sf")
+
+library(elevatr)
+library(sf)
+
+# We will now use the elevatr package to add elevation information to our dataframe based on lat and long location. 
+
+# First we must project our dataframe to a coordinate system using the sf package. 
+
+dat_beetles_projected <- dat_beetles %>%
+  # convert the data frame into a simple feature.
+  st_as_sf(
+    # set the column names with your point coordinates.
+    coords = c('lat', 'long'),
+    # set your coordinate reference system, 4326 is lat/long.
+    # the crs can be obtained from https://epsg.io/ if you do not know it.
+    crs = 4326)
+
+
+# Here we add elevation data to the beetle map based on the latitude and longitude of our spatial dataframe.
+# This dataset is large and takes a while so load the rda file instead
+#dat_beetles_elevation <- get_elev_point(dat_beetles_projected, prj = 4326, src = "aws", z = 10)
+
+#Increasing z in the above code makes you have a finer evolution resolution 
+
+#save(dat_beetles_elevation, file = "dat_beetles_elevation.rda")
+
+load(file = "dat_beetles_elevation.rda")
+
+
+```
+
+
+
+```{r Beetle interactive map}
+
+#install.packages("leaflet","leaflet.extras","htmltools","htmlwidgets","leafem")
+
+library(leaflet)
+library(leaflet.extras)
+library(htmltools)
+library(htmlwidgets)
+library(leafem)
+
+# Create a palate of colours for map based off of common names of beetles
+pal.beetle_name <- colorFactor(palette = "Set1", domain = dat_beetles_elevation$Common_name, reverse = T)
+
+c25 <- c(
+  "dodgerblue2", "#E31A1C", 
+  "green4",
+  "#6A3D9A",
+  "#FF7F00",
+  "black", "gold1",
+  "skyblue2", "#FB9A99",
+  "palegreen2",
+  "#CAB2D6",
+  "#FDBF6F", 
+  "gray70", "khaki2",
+  "maroon", "orchid1", "deeppink1", "blue1", "steelblue4",
+  "darkturquoise", "green1", "yellow4", "yellow3",
+  "darkorange4", "brown"
+)
+
+pal.beetle_unit <- colorFactor(palette = c25, domain = dat_beetles_elevation$unit_number, reverse = T)
+
+# Construct the interactive map for beetles across BC
+
+interactive_beetle_map <- leaflet(dat_beetles_elevation) %>% 
+        addTiles(group = "OSM") %>% 
+        addProviderTiles("CartoDB", group = "Carto") %>% 
+        addProviderTiles("Esri", group = "Esri") %>%
+        addMouseCoordinates() %>%
+        addCircleMarkers(data = dat_beetles_elevation, radius = 2, 
+                         group = dat_beetles_elevation$Common_name, color = ~pal.beetle_name(Common_name),
+                         popup = ~paste("Common name: ","<b>", Common_name, "</b>", "<br/>",
+                                         "Latin name:","<i>",Latin_name,"</i>", "<br/>",
+                                         "Species code:", species_code, "<br/>",
+                                         "Elevation: ", elevation,"m <br/>",
+                                         "Unit Number: ", unit_number, "<br/>"),
+                         label = ~htmlEscape(Common_name)) %>%
+        addCircleMarkers(data = dat_beetles_elevation, radius = 2, 
+                         group = "Unit Number", color = ~pal.beetle_unit(unit_number),
+                         popup = ~paste("Common name: ","<b>", Common_name, "</b>", "<br/>",
+                                         "Latin name:","<i>",Latin_name,"</i>", "<br/>",
+                                         "Species code:", species_code, "<br/>",
+                                         "Elevation: ", elevation,"m <br/>",
+                                         "Unit Number: ", unit_number, "<br/>"),
+                         label = ~htmlEscape(Common_name)) %>%
+        addLayersControl(baseGroups = c("OSM", "Carto", "Esri"), 
+                         overlayGroups = c(dat_beetles_elevation$Common_name, "Unit Number")) %>% 
+        addLegend(position = "bottomright",
+            pal = pal.beetle_name, values = ~Common_name, opacity = 1, title = "Beetle Common Names", group = dat_beetles_elevation$Common_name) %>%
+        addLegend(position = "bottomleft",
+            pal = pal.beetle_unit, values = ~unit_number, opacity = 1, title = "Unit Names",group = "Unit Number") %>%
+        addMiniMap(position = "topleft") %>%
+        setView(lat = 53.876, lng = -122.769 , zoom = 10)
+
+#saveWidget(interactive_beetle_map, file="interactive_beetle_map.html")
+
+
+# Create a palate of colours for map based off of beetle elevations
+pal.beetle_elev <- colorNumeric(palette = "Set1", domain = dat_beetles_elevation$elevation, reverse = T)
+
+interactive_beetle_elevation_map <- leaflet(dat_beetles_elevation) %>% 
+        addTiles(group = "OSM") %>% 
+        addProviderTiles("CartoDB", group = "Carto") %>% 
+        addProviderTiles("Esri", group = "Esri") %>%
+        addMouseCoordinates() %>%
+        addCircleMarkers(data = dat_beetles_elevation, radius = 2, 
+                         group = dat_beetles_elevation$Common_name, color = ~pal.beetle_elev(elevation),
+                         popup = ~paste("Common name: ","<b>", Common_name, "</b>", "<br/>",
+                                         "Latin name:","<i>",Latin_name,"</i>", "<br/>",
+                                         "Species code:", species_code, "<br/>",
+                                         "Elevation: ", elevation,"m <br/>",
+                                         "Unit Number: ", unit_number, "<br/>"),
+                         label = ~htmlEscape(Common_name)) %>% 
+        addLayersControl(baseGroups = c("OSM", "Carto", "Esri"), 
+                         overlayGroups = c(dat_beetles_elevation$Common_name)) %>% 
+        addLegend(position = "bottomright",
+            pal = pal.beetle_elev, values = ~elevation, opacity = 1, title = "Elevation (meters)") %>%
+        setView(lat = 53.876, lng = -122.769 , zoom = 10) 
+
+
+
+```
+
+interactive_beetle_map
+
+interactive_beetle_elevation_map
+
+```{r diversity indecies, include=F,echo=F}
+dat_beetle_counts <- dat_beetles_elevation %>% mutate(beetle_zones = case_when(elevation < 900 ~ 1,
+                                                                               elevation < 1100 ~ 2,
+                                                                               elevation < 1300 ~ 3,
+                                                                               elevation < 1500 ~ 4,
+                                                                               elevation < 1700 ~ 5,
+                                                                               elevation < 1900 ~ 6,
+                                                                               elevation < 2100 ~ 7)) %>%
+  group_by(unit_number) %>% summarise(total = sum(species_code %in% c("IBB","ISB","IBD")),
+                                       total_balsam = sum(species_code == "IBB"),
+                                       prop_balsam = total_balsam / total,
+                                       total_spruce = sum(species_code == "ISB"),
+                                       prop_spruce = total_spruce / total,
+                                       total_doug = sum(species_code == "IBD"),
+                                       prop_doug = total_doug / total, 
+                                       group = unique(unit_number)) %>%
+  select(c(total_spruce,total_doug,total_balsam,group))
+  
+dat_beetle_counts$geometry <- NULL
+
+dat_beetle_group_names <- dat_beetle_counts$group
+
+dat_beetle_counts <- dat_beetle_counts %>% select(c(total_spruce,total_doug,total_balsam))
+
+# Data needs to be in the form of a matrix
+# q and alpha can be set to anything but i think 2 and 0.5 are standard. 
+qD_alpha <- function(data, q, alpha) {
+  N <- nrow(data)
+  S <- ncol(data)
+  pij <- data / rowSums(data)
+  pi_j <- colSums(data) / sum(data)
+  p_i_given_j <- pij / matrix(rep(pi_j, N), nrow=N, byrow=TRUE)
+  numerator <- sum((pij * (p_i_given_j ^ (q - 1))) ^ alpha)
+  denominator <- sum((pij * t(apply(p_i_given_j, 1, function(x) x ^ (q - 1)))) ^ alpha)
+  return(1 / (denominator ^ (1 / (q - 1))))
+}
+
+diversity_alpha <- qD_alpha(dat_beetle_counts,2,0.5)
+
+qD_gamma <- function(data, q) {
+  S <- ncol(data)
+  pi <- colSums(data) / sum(data)
+  numerator <- sum((pi * (pi ^ (q - 1))))
+  denominator <- (numerator) ^ (1 / (q - 1))
+  return(1 / denominator)
+}
+  
+diversity_gamma <- qD_gamma(dat_beetle_counts,2)
+
+diversity_beta <- diversity_gamma/diversity_alpha
+
+# Compute species richness
+species_richness <- apply(dat_beetle_counts, 1, function(x) sum(x > 0))
+
+# Compute Simpson's index
+simpsons_index <- apply(dat_beetle_counts, 1, function(x) 1 - sum((x * (x - 1)) / (sum(x) * (sum(x) - 1))))
+
+# Compute Shannon's index
+shannons_index <- apply(dat_beetle_counts, 1, function(x) -sum((x / sum(x)) * log(x / sum(x))))
+
+alpha_indexes <- as.data.frame(cbind(group_names = dat_beetle_group_names,species_richness,simpsons_index,shannons_index))
+
+
+
+
+```
+
+
+```{r beetle linear modeling}
+
+mod_beetles <- read_csv("PST_IF_PTC.csv", col_names = T) %>% 
+  # Here we rename the columns using the rename() function to something more intuitive.
+  rename("Common_name" = "PST_CMN_NM",
+         "Latin_name" = "PST_LTN_NM",
+         "Species_code" = "PST_SPC_CD",
+         "Year" = "CPTR_YR",
+         "lat" = "X",
+         "long" = "Y",
+         "unit_number" = "ORG_UNITNO",
+         "Tree_code" = "TR_SPCS_CD",
+         "Tree_name" = "TR_CM_NM",
+         "Area_ha" = "AREA_HA") %>%
+  select(c("Common_name","Latin_name","Species_code","Year","lat","long","unit_number","Tree_code","Tree_name","Area_ha")) %>% na.omit() %>% mutate(across(where(is.character) | unit_number, as.factor))
+
+#mod_beetles_elevation <- mod_beetles %>%
+#  st_as_sf(coords = c('lat', 'long'), crs = 4326) %>% get_elev_point(., prj = 4326, src = "aws", z = 10)
+
+#mod_beetles_elevation$geometry <- NULL
+
+#save(mod_beetles_elevation, file = "mod_beetles_elevation.rda")
+
+load("mod_beetles_elevation.rda")
+
+mod_linear <- lm(elevation ~ unit_number + Tree_code + Species_code + Area_ha, 
+                 data = mod_beetles_elevation)
+
+
+fit_res <- data.frame(Fitted = fitted(mod_linear),
+                      Residuals = resid(mod_linear))
+
+resid_plot <- ggplot(fit_res, aes(Fitted,Residuals)) + # set the aesthetics for the x and y axes
+  geom_point() + 
+  geom_hline(yintercept = 0,linetype = "dashed") + 
+  xlab("Fitted") + 
+  ylab("Residuals")+ 
+  theme_bw()
+
+quartile_plot <- ggplot(fit_res, aes(sample = Residuals)) + # enter the variable for the aesthetics sample
+  stat_qq()+
+  stat_qq_line() +
+  xlab("Residual quantiles") + 
+  ylab("Theoretical quantiles") +
+  theme_bw()
+
+resid_distribution_plot <- ggplot(fit_res, aes(Residuals)) + # set the aesthetics for the x axis
+  geom_histogram(binwidth = 5,color="black",fill="white") + 
+  xlab("Residuals") + 
+  ylab("Frequency") + 
+  theme_bw()
+
+summary(mod_linear)
+
+```
+
+resid_plot
+
+quartile_plot
+
+resid_distribution_plot
+
+
+
+
+
+
+
