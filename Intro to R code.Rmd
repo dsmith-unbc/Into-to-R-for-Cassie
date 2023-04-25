@@ -94,6 +94,34 @@ no_four_cyl_hp_90 <- r_intro_cars %>% filter(!cyl == 4 & hp > 120) %>% mutate(L_
 
 ```
 
+```{r data manipulation continued}
+
+# You can clean up your R code be using script to run specific chunks of code. 
+
+# The source() function allows you to run code in .R file types before the rest of the code in the chunk is run.
+
+# To make a script, go to "file" on the top bar of R studio. Then select "new file" and the first option will be "script". 
+
+source("demo_folder/cassie_source.R")
+
+# Joining one dataframe to another is a very useful technique to linking data. 
+
+# First you need two dataframes to join together. We will be joining source cars with a dataframe I made up (below).
+
+made_up_dat <- data.frame(rowname = source_cars[,1],mpg = source_cars[,2],vroominess = "vroom")
+
+# This joins one dataframe to another based on a common column (or a key ID column)
+
+vroom_dat <- source_cars_named %>% left_join(made_up_dat, by = "rowname")
+
+# You can also join based on multiple columns
+
+vroom_dat <- source_cars_named %>% left_join(made_up_dat, by = c("rowname", "mpg"))
+
+
+```
+
+
 ```{r more advance data manipulation, echo=F, include=F}
 # Here we will take a dataset, manipulate it, and display it on a map.
 
@@ -115,7 +143,7 @@ dat_beetles <- read_csv("PST_IF_PTC.csv", col_names = T) %>%
          "Area_ha" = "AREA_HA") %>%
   # Here we get rid of all other columns from the original dataset we do not need.
   select(c(lat,long,"Common_name", "Latin_name","Year","unit_number","Species_code")) %>% 
-  # This is more advance, but here we create a new column called species_code and make a specific code be used for each beetle name in the Common_name column. 
+  # This is more advance, but here we create a new column called species_code and make a specific code be used for each beetle name in the Common_name column. The last TRUE part makes any names I missed be kept in the new column. 
   mutate(species_code = case_when(Common_name == "Western Balsam Bark Beetle" ~ "IBB",
                                   Common_name == "Spruce Beetle" ~ "ISB",
                                   Common_name == "Douglas-fir Beetle" ~ "IBD",
@@ -125,7 +153,7 @@ dat_beetles <- read_csv("PST_IF_PTC.csv", col_names = T) %>%
                                   Common_name == "Slide" ~ NA,
                                   TRUE ~ Common_name)) %>% 
   # Finally we filter the names as we need. 
-  filter(Common_name %in% c("Western Balsam Bark Beetle","Spruce Beetle","Douglas-fir Beetle","Mountain Pine Beetle","Bark Beetles","Balsam Woolly Adelgid","Western Pine Beetle"))
+  filter(Common_name %in% c("Western Balsam Bark Beetle","Spruce Beetle","Douglas-fir Beetle","Mountain Pine Beetle","Bark Beetles","Western Pine Beetle"))
 
 #install.packages("elevatr","sf")
 
@@ -174,6 +202,7 @@ library(leafem)
 # Create a palate of colours for map based off of common names of beetles
 pal.beetle_name <- colorFactor(palette = "Set1", domain = dat_beetles_elevation$Common_name, reverse = T)
 
+# Needed to make a custom colour palate for factors greater than 11
 c25 <- c(
   "dodgerblue2", "#E31A1C", 
   "green4",
@@ -190,15 +219,19 @@ c25 <- c(
   "darkorange4", "brown"
 )
 
+# Applying the custom colour palate to the unit number factors
 pal.beetle_unit <- colorFactor(palette = c25, domain = dat_beetles_elevation$unit_number, reverse = T)
 
 # Construct the interactive map for beetles across BC
 
 interactive_beetle_map <- leaflet(dat_beetles_elevation) %>% 
+  # These 4 lines of code add the base maps and mouse coordinates to the map.
+  # Each group will be clickable on the map to be swapped between (except mouse). 
         addTiles(group = "OSM") %>% 
         addProviderTiles("CartoDB", group = "Carto") %>% 
         addProviderTiles("Esri", group = "Esri") %>%
         addMouseCoordinates() %>%
+  # This part adds the circle markers to the map with popup bubbles for additional data. 
         addCircleMarkers(data = dat_beetles_elevation, radius = 2, 
                          group = dat_beetles_elevation$Common_name, color = ~pal.beetle_name(Common_name),
                          popup = ~paste("Common name: ","<b>", Common_name, "</b>", "<br/>",
@@ -215,13 +248,17 @@ interactive_beetle_map <- leaflet(dat_beetles_elevation) %>%
                                          "Elevation: ", elevation,"m <br/>",
                                          "Unit Number: ", unit_number, "<br/>"),
                          label = ~htmlEscape(Common_name)) %>%
+  # This code adds the ability to toggle layers on and off while interacting with the map.
         addLayersControl(baseGroups = c("OSM", "Carto", "Esri"), 
                          overlayGroups = c(dat_beetles_elevation$Common_name, "Unit Number")) %>% 
+  # This adds a legend to the map
         addLegend(position = "bottomright",
             pal = pal.beetle_name, values = ~Common_name, opacity = 1, title = "Beetle Common Names", group = dat_beetles_elevation$Common_name) %>%
         addLegend(position = "bottomleft",
             pal = pal.beetle_unit, values = ~unit_number, opacity = 1, title = "Unit Names",group = "Unit Number") %>%
+  # A minimap helps the user identify where they are in respect to other geographical landmarks. 
         addMiniMap(position = "topleft") %>%
+  # This determines where the user starts when viewing the map. 
         setView(lat = 53.876, lng = -122.769 , zoom = 10)
 
 #saveWidget(interactive_beetle_map, file="interactive_beetle_map.html")
@@ -258,6 +295,7 @@ interactive_beetle_map
 interactive_beetle_elevation_map
 
 ```{r diversity indecies, include=F,echo=F}
+# Here we make a new dataframe based on the counts of beetles. 
 dat_beetle_counts <- dat_beetles_elevation %>% mutate(beetle_zones = case_when(elevation < 900 ~ 1,
                                                                                elevation < 1100 ~ 2,
                                                                                elevation < 1300 ~ 3,
@@ -265,67 +303,94 @@ dat_beetle_counts <- dat_beetles_elevation %>% mutate(beetle_zones = case_when(e
                                                                                elevation < 1700 ~ 5,
                                                                                elevation < 1900 ~ 6,
                                                                                elevation < 2100 ~ 7)) %>%
-  group_by(unit_number) %>% summarise(total = sum(species_code %in% c("IBB","ISB","IBD")),
-                                       total_balsam = sum(species_code == "IBB"),
-                                       prop_balsam = total_balsam / total,
-                                       total_spruce = sum(species_code == "ISB"),
-                                       prop_spruce = total_spruce / total,
-                                       total_doug = sum(species_code == "IBD"),
-                                       prop_doug = total_doug / total, 
-                                       group = unique(unit_number)) %>%
-  select(c(total_spruce,total_doug,total_balsam,group))
-  
+  # We group the data based on unit numbers
+  group_by(unit_number) %>% 
+  # We then summarise the sum of the values together to make a table of total beetles found in each group. 
+  summarise(total = sum(Species_code %in% c("IBB","ISB","IBD","IBM","IB","IBD", "IAB", "IBW")),
+            total_balsam = sum(Species_code == "IBB"),
+            prop_balsam = total_balsam / total,
+            total_spruce = sum(Species_code == "ISB"),
+            prop_spruce = total_spruce / total,
+            total_doug = sum(Species_code == "IBD"),
+            prop_doug = total_doug / total, 
+            total_mountain = sum(Species_code == "IBM"),
+            prop_mountain = total_mountain / total, 
+            total_bark = sum(Species_code == "IB"),
+            prop_bark = total_bark / total,
+            total_western = sum(Species_code == "IBW"),
+            prop_western = total_western / total,
+            group = unique(unit_number)) %>%
+  # Here I just select what I want from what I made. 
+  select(c(total_spruce,total_doug,total_balsam,total_mountain,total_bark,total_western,group)) %>%
+  # Always remember to ungroup() after grouping to avoid issues down the line. 
+  ungroup()
+
+# Here I just get rid of the geometry column (its annoying to get rid of otherwise).  
 dat_beetle_counts$geometry <- NULL
 
+# This is another way to join but by one column. I add the groups of the data to a specific dataframe with group names. I will need this down the line. 
 dat_beetle_group_names <- dat_beetle_counts$group
 
-dat_beetle_counts <- dat_beetle_counts %>% select(c(total_spruce,total_doug,total_balsam))
+dat_beetle_counts <- dat_beetle_counts %>% select(c(total_spruce,total_doug,total_balsam,total_mountain,total_bark,total_western))
+
+dat_beetle_counts <- as.matrix(dat_beetle_counts)
 
 # Data needs to be in the form of a matrix
 # q and alpha can be set to anything but i think 2 and 0.5 are standard. 
-qD_alpha <- function(data, q, alpha) {
-  N <- nrow(data)
-  S <- ncol(data)
-  pij <- data / rowSums(data)
-  pi_j <- colSums(data) / sum(data)
-  p_i_given_j <- pij / matrix(rep(pi_j, N), nrow=N, byrow=TRUE)
-  numerator <- sum((pij * (p_i_given_j ^ (q - 1))) ^ alpha)
-  denominator <- sum((pij * t(apply(p_i_given_j, 1, function(x) x ^ (q - 1)))) ^ alpha)
-  return(1 / (denominator ^ (1 / (q - 1))))
+alpha_diversity <- function(data, q, alpha) {
+  p_ij <- data / rowSums(data)
+  p_ij[is.na(p_ij)] <- 0
+  p_i <- colSums(p_ij)
+  p_i[p_i == 0] <- 1 # Handle cases where all species are absent
+  p_i_given_j <- p_ij / matrix(p_i, nrow = nrow(p_ij), ncol = ncol(p_ij), byrow = TRUE)
+  div <- 1 / ((rowSums(p_ij * p_i_given_j^(q - 1)))^(1 / (q - 1)))
+  return(div^alpha)
 }
 
-diversity_alpha <- qD_alpha(dat_beetle_counts,2,0.5)
+# This gets us our alpha diversity based on our matrix of beetle totals per group.   
+diversity_alpha <- alpha_diversity(dat_beetle_counts,2,0.5)
 
-qD_gamma <- function(data, q) {
-  S <- ncol(data)
-  pi <- colSums(data) / sum(data)
-  numerator <- sum((pi * (pi ^ (q - 1))))
-  denominator <- (numerator) ^ (1 / (q - 1))
-  return(1 / denominator)
+gamma_diversity <- function(data, q) {
+  p_i <- colSums(data) / sum(data)
+  sum_pq <- sum(p_i^q)
+  1 / (sum_pq ^ (1/(q-1)))
 }
-  
-diversity_gamma <- qD_gamma(dat_beetle_counts,2)
 
+# This gets us our gamma diversity based on our matrix of beetle totals per group.  
+diversity_gamma <- gamma_diversity(dat_beetle_counts,2)
+
+# This gets us our betal diversity based on our alpha and gamma diversities.
 diversity_beta <- diversity_gamma/diversity_alpha
 
 # Compute species richness
 species_richness <- apply(dat_beetle_counts, 1, function(x) sum(x > 0))
 
 # Compute Simpson's index
-simpsons_index <- apply(dat_beetle_counts, 1, function(x) 1 - sum((x * (x - 1)) / (sum(x) * (sum(x) - 1))))
+simpsons_index <- apply(dat_beetle_counts, 1, function(x) {
+  p <- x[x > 0] / sum(x)
+  1 - sum(p^2)
+})
 
 # Compute Shannon's index
-shannons_index <- apply(dat_beetle_counts, 1, function(x) -sum((x / sum(x)) * log(x / sum(x))))
+shannons_index <- apply(dat_beetle_counts, 1, function(x) {
+  p <- x[x > 0] / sum(x)
+  -sum(p * log2(p))
+})
 
-alpha_indexes <- as.data.frame(cbind(group_names = dat_beetle_group_names,species_richness,simpsons_index,shannons_index))
-
+# Here we cbind() (column bind) our group names dataframe to our new data. Allows for a more informative dataframe in the end. 
+indexes <- as.data.frame(cbind(group_names = dat_beetle_group_names,species_richness,simpsons_index,shannons_index,diversity_alpha,diversity_beta))
 
 
 
 ```
 
 
-```{r beetle linear modeling}
+```{r beetle linear modeling, warning=F}
+
+#install.packages("broom","emmeans")
+
+library(broom)
+library(emmeans)
 
 mod_beetles <- read_csv("PST_IF_PTC.csv", col_names = T) %>% 
   # Here we rename the columns using the rename() function to something more intuitive.
@@ -339,24 +404,43 @@ mod_beetles <- read_csv("PST_IF_PTC.csv", col_names = T) %>%
          "Tree_code" = "TR_SPCS_CD",
          "Tree_name" = "TR_CM_NM",
          "Area_ha" = "AREA_HA") %>%
-  select(c("Common_name","Latin_name","Species_code","Year","lat","long","unit_number","Tree_code","Tree_name","Area_ha")) %>% na.omit() %>% mutate(across(where(is.character) | unit_number, as.factor))
+  select(c("Common_name","Latin_name","Species_code","Year","lat","long","unit_number","Tree_code","Tree_name","Area_ha")) %>% na.omit() %>% mutate(across(where(is.character) | unit_number, as.factor)) %>%
+  filter(Common_name %in% c("Western Balsam Bark Beetle","Spruce Beetle","Douglas-fir Beetle","Mountain Pine Beetle","Bark Beetles","Balsam Woolly Adelgid","Western Pine Beetle"))
 
-#mod_beetles_elevation <- mod_beetles %>%
-#  st_as_sf(coords = c('lat', 'long'), crs = 4326) %>% get_elev_point(., prj = 4326, src = "aws", z = 10)
+# mod_beetles_elevation <- mod_beetles %>%
+#   st_as_sf(coords = c('lat', 'long'), crs = 4326) %>% get_elev_point(., prj = 4326, src = "aws", z = 10)
 
-#mod_beetles_elevation$geometry <- NULL
+# mod_beetles_elevation$geometry <- NULL
 
-#save(mod_beetles_elevation, file = "mod_beetles_elevation.rda")
+# save(mod_beetles_elevation, file = "mod_beetles_elevation.rda")
 
 load("mod_beetles_elevation.rda")
 
+# Here we make a global (all variable) linear model using the lm() function. 
 mod_linear <- lm(elevation ~ unit_number + Tree_code + Species_code + Area_ha, 
-                 data = mod_beetles_elevation)
+                 data = mod_beetles_elevation, na.action = na.fail)
 
+#Takes a global model and runs smaller models with fixed effects removed to find best model
+mod_linear_compare <- dredge(mod_linear)
 
-fit_res <- data.frame(Fitted = fitted(mod_linear),
-                      Residuals = resid(mod_linear))
+# The best model does not include Area_ha as a fixed-effect
 
+mod_linear_new <- lm(elevation ~ unit_number + Tree_code + Species_code, 
+                 data = mod_beetles_elevation, na.action = na.fail)
+
+# The summary() function gives you a bunch of useful information about models you run
+summary(mod_linear_new)
+
+# The tidy() function allows you to extract useful information from a model and display in a dataframe format.
+mod_table <- tidy(mod_linear_new)
+
+# Here we extract the fitted (predicted) values from the model as well as the residuals using the fitted() and resid() functions. We then put them into a dataframe for graphical display. 
+fit_res <- data.frame(Fitted = fitted(mod_linear_new),
+                      Residuals = resid(mod_linear_new))
+
+# The following will utilize the ggplot2 package. These ways of testing linear model ONLY work with certain types (such as they will NOT work with binomial linear models). However, in this case we are using a default Gaussian distribution model.  
+
+# Here we make a plot of the residual values. We want them to be fairly randomly dispersed around 0 with no clear pattern. If there is a pattern such as a wave or slope, then a linear model may not be an appropriate approach to the data and a non-linear approach would need to be explored. 
 resid_plot <- ggplot(fit_res, aes(Fitted,Residuals)) + # set the aesthetics for the x and y axes
   geom_point() + 
   geom_hline(yintercept = 0,linetype = "dashed") + 
@@ -364,6 +448,7 @@ resid_plot <- ggplot(fit_res, aes(Fitted,Residuals)) + # set the aesthetics for 
   ylab("Residuals")+ 
   theme_bw()
 
+# The quartile plot is another way of testing if your linear model is appropriate. You want your values to be along the line in the graph (made with stat_qq_line()). Some diversion on either end is ok as that just means there is some error (outliers) as you get further away. However you do not want to see anything far from the line. 
 quartile_plot <- ggplot(fit_res, aes(sample = Residuals)) + # enter the variable for the aesthetics sample
   stat_qq()+
   stat_qq_line() +
@@ -371,13 +456,21 @@ quartile_plot <- ggplot(fit_res, aes(sample = Residuals)) + # enter the variable
   ylab("Theoretical quantiles") +
   theme_bw()
 
+# This is the most straightforward plot. Do your residuals show you a normal distribution. In this case it does, however, some cases it may not (especially difficult with small datasets). 
 resid_distribution_plot <- ggplot(fit_res, aes(Residuals)) + # set the aesthetics for the x axis
   geom_histogram(binwidth = 5,color="black",fill="white") + 
   xlab("Residuals") + 
   ylab("Frequency") + 
   theme_bw()
 
-summary(mod_linear)
+# This is not necessary for a linear model but may help explain some relationships. The emmip() function from the emeans package allows you to plot predicted outcomes based on certain fixed effects. 
+# Here we see the elevation estimates and error of beetle species for each tree type and how that changes between different tree types. 
+# Pay attention to when we used mixed-effect modeling on the same dataset and see how the error changes. 
+emmip(mod_linear_new, ~ Tree_code|Species_code,data = mod_beetles_elevation, xlab = "Tree type", 
+      level = 0.95, CI = T,
+      ylab = "Predicted elevation (m)") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0, hjust=0.5), legend.position = "bottom") +
+  ggtitle("Linear model of elevation, beetle type and tree type") 
 
 ```
 
@@ -387,9 +480,66 @@ quartile_plot
 
 resid_distribution_plot
 
+```{r mixed effect modeling, warning=F}
+
+#install.packages("broom.mixed","lme4", "MuMIn")
+
+library(lme4)
+library(broom.mixed)
+library(MuMIn)
+
+# Here is our mixed effect model of beetle elevation. We have unit_number as a random effect with a random intercept (1|unit_number) and a slope of 1. I changed the control from "nloptwrap" which is the default to "bobyqa" to speed up the analysis and help convergence. 
+mod_mixed <- lmer(elevation ~ Tree_code + Species_code + Area_ha + (1|unit_number), 
+                 data = mod_beetles_elevation,
+                       control = lmerControl(optimizer = "bobyqa"), na.action = na.fail)
+
+summary(mod_mixed)
+
+mod_mixed_table <- tidy(mod_mixed)
+
+#Takes a global model and runs smaller models with fixed effects removed to find best model
+mod_mixed_compare <- dredge(mod_mixed)
+
+# Best model (lowest AIC and highest weight) is one with all variables
+# There is the possibility that no one model is the best model. If the model weights are less than 90% then you may have to utilize model averaging (not shown in this tutorial) to create a model that best explains the data. 
+view(mod_mixed_compare)
+
+fit_res_mixed <- data.frame(Fitted = fitted(mod_mixed),
+                      Residuals = resid(mod_mixed))
+
+resid_plot_mixed <- ggplot(fit_res_mixed, aes(Fitted,Residuals)) + # set the aesthetics for the x and y axes
+  geom_point() + 
+  geom_hline(yintercept = 0,linetype = "dashed") + 
+  xlab("Fitted") + 
+  ylab("Residuals")+ 
+  theme_bw()
+
+quartile_plot_mixed <- ggplot(fit_res_mixed, aes(sample = Residuals)) + # enter the variable for the aesthetics sample
+  stat_qq()+
+  stat_qq_line() +
+  xlab("Residual quantiles") + 
+  ylab("Theoretical quantiles") +
+  theme_bw()
+
+resid_distribution_plot_mixed <- ggplot(fit_res_mixed, aes(Residuals)) + # set the aesthetics for the x axis
+  geom_histogram(binwidth = 5,color="black",fill="white") + 
+  xlab("Residuals") + 
+  ylab("Frequency") + 
+  theme_bw()
+
+
+emmip(mod_mixed, ~ Tree_code|Species_code,data = mod_beetles_elevation, xlab = "Tree type", 
+      level = 0.95, CI = T,
+      ylab = "Predicted elevation (m)") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0, hjust=0.5), legend.position = "bottom") +
+  ggtitle("Mixed model of elevation, beetle type and tree type") 
 
 
 
 
+```
 
+resid_plot_mixed
+quartile_plot_mixed
+resid_distribution_plot_mixed
 
