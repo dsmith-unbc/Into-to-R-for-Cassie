@@ -175,11 +175,12 @@ dat_beetles_projected <- dat_beetles %>%
 
 
 # Here we add elevation data to the beetle map based on the latitude and longitude of our spatial dataframe.
+# By making z larger (more detail) or smaller (less detail) you can impact how fast the process takes. 
 # This dataset is large and takes a while so load the rda file instead
 #dat_beetles_elevation <- get_elev_point(dat_beetles_projected, prj = 4326, src = "aws", z = 10)
 
 #Increasing z in the above code makes you have a finer evolution resolution 
-
+# By saving a dataframe (or any R object) as a .rda file you can load in the results of analysis that take a long time to run therefore saving you time in the future. 
 #save(dat_beetles_elevation, file = "dat_beetles_elevation.rda")
 
 load(file = "dat_beetles_elevation.rda")
@@ -333,10 +334,12 @@ dat_beetle_group_names <- dat_beetle_counts$group
 
 dat_beetle_counts <- dat_beetle_counts %>% select(c(total_spruce,total_doug,total_balsam,total_mountain,total_bark,total_western))
 
+# Makes the data into the form of a matrix
 dat_beetle_counts <- as.matrix(dat_beetle_counts)
 
 # Data needs to be in the form of a matrix
 # q and alpha can be set to anything but i think 2 and 0.5 are standard. 
+# Custom function using function() to make diversity formulas
 alpha_diversity <- function(data, q, alpha) {
   p_ij <- data / rowSums(data)
   p_ij[is.na(p_ij)] <- 0
