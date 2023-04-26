@@ -544,7 +544,7 @@ emmip(mod_mixed, ~ Tree_code|Species_code,data = mod_beetles_elevation, xlab = "
 
 # Write data to a csv
 
-# write_csv(mod_linear_compare, file = "linear_model.xlsx")
+# write_csv(mod_linear_compare, file = "linear_model.csv")
 
 
 ```
