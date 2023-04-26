@@ -391,10 +391,11 @@ indexes <- as.data.frame(cbind(group_names = dat_beetle_group_names,species_rich
 
 ```{r beetle linear modeling, warning=F}
 
-#install.packages("broom","emmeans")
+#install.packages("broom","emmeans", "MuMIn")
 
 library(broom)
 library(emmeans)
+library(MuMIn)
 
 mod_beetles <- read_csv("PST_IF_PTC.csv", col_names = T) %>% 
   # Here we rename the columns using the rename() function to something more intuitive.
@@ -476,6 +477,9 @@ emmip(mod_linear_new, ~ Tree_code|Species_code,data = mod_beetles_elevation, xla
   theme(axis.text.x = element_text(angle = 90, vjust = 0, hjust=0.5), legend.position = "bottom") +
   ggtitle("Linear model of elevation, beetle type and tree type") 
 
+
+beetle_pred <- mod_beetles_elevation %>% mutate(predicted = predict(mod_linear_new))
+
 ```
 
 resid_plot
@@ -486,11 +490,11 @@ resid_distribution_plot
 
 ```{r mixed effect modeling, warning=F}
 
-#install.packages("broom.mixed","lme4", "MuMIn")
+#install.packages("broom.mixed","lme4")
 
 library(lme4)
 library(broom.mixed)
-library(MuMIn)
+
 
 # Here is our mixed effect model of beetle elevation. We have unit_number as a random effect with a random intercept (1|unit_number) and a slope of 1. I changed the control from "nloptwrap" which is the default to "bobyqa" to speed up the analysis and help convergence. 
 mod_mixed <- lmer(elevation ~ Tree_code + Species_code + Area_ha + (1|unit_number), 
