@@ -18,7 +18,7 @@ date: "2023-04-17"
 # This is done using the function install.packages()
 # After installing a package it will be on your computer until you remove it
 # You will occasionally need to update your packages but that is not a regular thing
-#install.packages("tidyverse","ggplot2","readxl")
+# install.packages("tidyverse","ggplot2","readxl")
 
 # After a package is installed you will need to activate it
 # This is done with the function library()
@@ -39,7 +39,6 @@ library(ggplot2)
 
 
 ```
-
 
 ```{r data setup, echo= F}
 # For this tutorial we will be using the mtcars dataset which come with R.
@@ -202,6 +201,8 @@ library(leafem)
 
 # Create a palate of colours for map based off of common names of beetles
 pal.beetle_name <- colorFactor(palette = "Set1", domain = dat_beetles_elevation$Common_name, reverse = T)
+
+# unique(dat_beetles_elevation$Common_name)
 
 # Needed to make a custom colour palate for factors greater than 11
 c25 <- c(
